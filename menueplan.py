@@ -6,11 +6,6 @@ from debug_stats import DebugStats
 from meal import Meal
 
 
-BREAKFAST_RANGE = (300, 700)
-LUNCH_RANGE = (500, 1000)
-DINNER_RANGE = (400, 900)
-
-
 # --------------------------------
 # Kosten berechnen
 # --------------------------------
@@ -20,7 +15,9 @@ def calculate_recipe_cost(recipe):
     cost = 0
 
     for name, amount in recipe.ingredients.items():
+
         ingredient = ingredients_db[name]
+
         cost += amount * ingredient["price_per_unit"]
 
     return cost
@@ -46,10 +43,11 @@ def calculate_recipe_calories(recipe):
 
 
 # --------------------------------
-# Rezept eindeutig machen
+# Hash für Rezept
 # --------------------------------
 
 def recipe_to_hashable(recipe):
+
     return tuple(sorted(recipe.ingredients.items()))
 
 
@@ -61,6 +59,7 @@ def generate_recipe_pool(size, vegan_mode):
 
     pool = []
     seen = set()
+
     attempts = 0
 
     while len(pool) < size and attempts < size * 20:
@@ -91,28 +90,58 @@ def generate_menu(days, max_calories_per_day, vegan_mode):
 
     stats = DebugStats()
 
-    breakfast_pool = generate_recipe_pool(30, vegan_mode)
-    lunch_pool = generate_recipe_pool(30, vegan_mode)
-    dinner_pool = generate_recipe_pool(30, vegan_mode)
+    # größere Pools erzeugen
+    breakfast_pool = generate_recipe_pool(60, vegan_mode)
+    lunch_pool = generate_recipe_pool(60, vegan_mode)
+    dinner_pool = generate_recipe_pool(60, vegan_mode)
+
+    # --------------------------------
+    # Dynamische Kalorienbereiche
+    # --------------------------------
 
     breakfast_target = max_calories_per_day * 0.3
     lunch_target = max_calories_per_day * 0.4
     dinner_target = max_calories_per_day * 0.3
 
+    tolerance = max_calories_per_day * 0.25
+
+    BREAKFAST_RANGE = (
+        breakfast_target - tolerance,
+        breakfast_target + tolerance
+    )
+
+    LUNCH_RANGE = (
+        lunch_target - tolerance,
+        lunch_target + tolerance
+    )
+
+    DINNER_RANGE = (
+        dinner_target - tolerance,
+        dinner_target + tolerance
+    )
+
+    # --------------------------------
+    # Pools nach Zielkalorien sortieren
+    # --------------------------------
+
     breakfast_pool.sort(key=lambda x: abs(x[2] - breakfast_target))
     lunch_pool.sort(key=lambda x: abs(x[2] - lunch_target))
     dinner_pool.sort(key=lambda x: abs(x[2] - dinner_target))
 
-    # nur beste Kandidaten behalten
-    breakfast_pool = breakfast_pool[:20]
-    lunch_pool = lunch_pool[:20]
-    dinner_pool = dinner_pool[:20]
+    # wichtigste Kandidaten behalten
+    breakfast_pool = breakfast_pool[:15]
+    lunch_pool = lunch_pool[:15]
+    dinner_pool = dinner_pool[:15]
 
     best_menu = None
     lowest_cost = float("inf")
     best_difference = float("inf")
 
     used_recipes = set()
+
+    # --------------------------------
+    # Backtracking
+    # --------------------------------
 
     def backtrack(day_index, current_menu, current_cost):
 
@@ -130,7 +159,7 @@ def generate_menu(days, max_calories_per_day, vegan_mode):
 
                 day_kcal = sum(meal.calories for meal in day)
 
-                total_difference += max_calories_per_day - day_kcal
+                total_difference += abs(max_calories_per_day - day_kcal)
 
             if (
                 total_difference < best_difference
@@ -145,6 +174,10 @@ def generate_menu(days, max_calories_per_day, vegan_mode):
                 best_difference = total_difference
 
             return
+
+        # ------------------------------
+        # Kombinationen ausprobieren
+        # ------------------------------
 
         for b_recipe, b_cost, b_cal in breakfast_pool:
 
@@ -184,7 +217,7 @@ def generate_menu(days, max_calories_per_day, vegan_mode):
 
                     day_kcal = b_cal + l_cal + d_cal
 
-                    if day_kcal > max_calories_per_day:
+                    if day_kcal > max_calories_per_day * 1.15:
                         stats.prune_calories()
                         continue
 
@@ -217,6 +250,33 @@ def generate_menu(days, max_calories_per_day, vegan_mode):
                     used_recipes.difference_update([b_key, l_key, d_key])
 
     backtrack(0, [], 0)
+
+    # --------------------------------
+    # Sicherheitslösung (Fallback)
+    # --------------------------------
+
+    if best_menu is None:
+
+        print("Fallback Menü aktiviert")
+
+        best_menu = []
+
+        for _ in range(days):
+
+            b = breakfast_pool[0]
+            l = lunch_pool[0]
+            d = dinner_pool[0]
+
+            best_menu.append([
+
+                Meal("breakfast", b[0], b[2]),
+                Meal("lunch", l[0], l[2]),
+                Meal("dinner", d[0], d[2]),
+
+            ])
+
+        lowest_cost = b[1] + l[1] + d[1]
+        best_difference = 0
 
     stats.print_report()
 

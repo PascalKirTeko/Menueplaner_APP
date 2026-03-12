@@ -62,21 +62,20 @@ def main():
 
         day_calories = 0
 
-
         for meal in day:
 
             print(f"\n{meal_names[meal.meal_type]}")
             print(meal.recipe.name)
 
-            print(f"Kalorien: {meal.calories:.0f}")
-
-            day_calories += meal.calories
-
             for ingredient, amount in meal.recipe.ingredients.items():
 
                 unit = ingredients_db[ingredient]["unit"]
 
-                print(f"  {ingredient:<15} {amount}{unit}")
+                print(f"{ingredient:<15} {amount}{unit}")
+
+            print(f"Kalorien: {meal.calories:.0f}")
+
+            day_calories += meal.calories
 
         print("\n----- Tagesübersicht -----")
         print("Kalorien:", int(day_calories))

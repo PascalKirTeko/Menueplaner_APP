@@ -1,5 +1,3 @@
-# meal.py
-
 class Meal:
 
     def __init__(self, meal_type, recipe, calories):
