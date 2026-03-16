@@ -3,25 +3,52 @@
 from menueplan import generate_menu
 from Kalorienbedarf import berechne_gesamtbedarf
 from Zutaten_db import ingredients_db
+from einkaufsliste import print_shopping_list
+from pdf_export import export_menu_pdf
 
 
 def main():
 
     print("==== Menüplan Generator ====\n")
 
-    days = int(input("Anzahl Wochentage (1-7): "))
+    while True:
+        try:
+
+            days = int(input("Anzahl Wochentage (1-7): "))
+
+            if 1 <= days <=7:
+                break
+            else:
+                print("Bitte geben Sie einen Wert zwischen 1 und 7 Wochentagen an")
+        except ValueError:
+            print("Bitte geben Sie eine Zahl für 1 bis 7 Wochentage ein")
 
     print("\nErnährungsform:")
     print("1 - Vegan")
     print("2 - Fleisch erlaubt")
 
-    vegan_mode = input("Zahl eingeben: ") == "1"
+    while True:
+        vegan_input = input("Zahl eingeben: ")
+
+        if vegan_input in ["1", "2"]:
+            vegan_mode = vegan_input == "1"
+            break
+        else:
+            print("Bitte geben Sie 1 für Vegan oder 2 für Fleisch erlaubt ein.")
+
+
 
     print("\nKalorien:")
     print("1 - Manuell eingeben")
     print("2 - Automatisch berechnen")
 
-    kcal_mode = input("Zahl eingeben: ")
+    while True:
+        kcal_mode = input("Zahl eingeben: ")
+
+        if kcal_mode in ["1", "2"]:
+            break
+        else:
+            print("Bitte geben Sie 1 für manuell oder 2 für automatisch ein.")
 
     if kcal_mode == "1":
         max_calories = float(input("Max Kalorien pro Tag: "))
@@ -39,19 +66,7 @@ def main():
     }
 
     # -------------------------------
-    # Strukturprüfung
-    # -------------------------------
-
-    for day in menu:
-        assert len(day) == 3, "Ein Tag muss 3 Mahlzeiten haben"
-
-        for meal in day:
-            assert hasattr(meal, "meal_type")
-            assert hasattr(meal, "recipe")
-            assert hasattr(meal, "calories")
-
-    # -------------------------------
-    # Ausgabe
+    # Menü Ausgabe
     # -------------------------------
 
     for i, day in enumerate(menu, 1):
@@ -81,6 +96,30 @@ def main():
         print("Kalorien:", int(day_calories))
 
     print("\nGesamtkosten:", round(cost, 2), "CHF")
+
+    # -------------------------------
+    # Einkaufsliste Abfrage
+    # -------------------------------
+
+    print("\nEinkaufsliste anzeigen?")
+    print("1 - Ja")
+    print("2 - Nein")
+
+    if input("Zahl eingeben: ") == "1":
+
+        print_shopping_list(menu)
+
+    # -------------------------------
+    # PDF Export
+    # -------------------------------
+
+    print("\nPDF Export erstellen?")
+    print("1 - Ja")
+    print("2 - Nein")
+
+    if input("Zahl eingeben: ") == "1":
+
+        export_menu_pdf(menu)
 
 
 if __name__ == "__main__":

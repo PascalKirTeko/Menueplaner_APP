@@ -62,7 +62,7 @@ def generate_recipe_pool(size, vegan_mode):
 
     attempts = 0
 
-    while len(pool) < size and attempts < size * 20:
+    while len(pool) < size and attempts < size * 10:
 
         recipe = generate_recipe(ingredients_db, vegan=vegan_mode)
 
@@ -91,9 +91,9 @@ def generate_menu(days, max_calories_per_day, vegan_mode):
     stats = DebugStats()
 
     # größere Pools erzeugen
-    breakfast_pool = generate_recipe_pool(60, vegan_mode)
-    lunch_pool = generate_recipe_pool(60, vegan_mode)
-    dinner_pool = generate_recipe_pool(60, vegan_mode)
+    breakfast_pool = generate_recipe_pool(30, vegan_mode)
+    lunch_pool = generate_recipe_pool(30, vegan_mode)
+    dinner_pool = generate_recipe_pool(30, vegan_mode)
 
     # --------------------------------
     # Dynamische Kalorienbereiche
@@ -129,15 +129,64 @@ def generate_menu(days, max_calories_per_day, vegan_mode):
     dinner_pool.sort(key=lambda x: abs(x[2] - dinner_target))
 
     # wichtigste Kandidaten behalten
-    breakfast_pool = breakfast_pool[:15]
-    lunch_pool = lunch_pool[:15]
-    dinner_pool = dinner_pool[:15]
+    breakfast_pool = breakfast_pool[:6]
+    lunch_pool = lunch_pool[:6]
+    dinner_pool = dinner_pool[:6]
 
     best_menu = None
     lowest_cost = float("inf")
     best_difference = float("inf")
 
     used_recipes = set()
+
+    # --------------------------------
+    # Tageskombinationen einmal berechnen
+    # --------------------------------
+
+    day_combinations = []
+
+    for b_recipe, b_cost, b_cal in breakfast_pool:
+
+        if not (BREAKFAST_RANGE[0] <= b_cal <= BREAKFAST_RANGE[1]):
+            continue
+
+        for l_recipe, l_cost, l_cal in lunch_pool:
+
+            if not (LUNCH_RANGE[0] <= l_cal <= LUNCH_RANGE[1]):
+                continue
+
+        # früher Kaloriencheck
+            if b_cal + l_cal > max_calories_per_day * 1.15:
+                continue
+
+            for d_recipe, d_cost, d_cal in dinner_pool:
+
+                if not (DINNER_RANGE[0] <= d_cal <= DINNER_RANGE[1]):
+                    continue
+
+                day_kcal = b_cal + l_cal + d_cal
+
+                if day_kcal > max_calories_per_day * 1.15:
+                    continue
+
+                day_cost = b_cost + l_cost + d_cost
+
+                day_menu = [
+
+                    Meal("breakfast", b_recipe, b_cal),
+                    Meal("lunch", l_recipe, l_cal),
+                    Meal("dinner", d_recipe, d_cal),
+
+                ]
+
+                keys = [
+                    recipe_to_hashable(b_recipe),
+                    recipe_to_hashable(l_recipe),
+                    recipe_to_hashable(d_recipe),
+                ]
+
+                day_combinations.append((day_menu, day_cost, keys))
+
 
     # --------------------------------
     # Backtracking
@@ -147,7 +196,8 @@ def generate_menu(days, max_calories_per_day, vegan_mode):
 
         nonlocal best_menu, lowest_cost, best_difference
 
-        stats.visit_node()
+        if best_difference == 0:
+            return
 
         if day_index == days:
 
@@ -173,81 +223,40 @@ def generate_menu(days, max_calories_per_day, vegan_mode):
                 lowest_cost = current_cost
                 best_difference = total_difference
 
+                if best_difference == 0:
+                    return
+
             return
 
         # ------------------------------
-        # Kombinationen ausprobieren
+        # Tageskombinationen testen
         # ------------------------------
 
-        for b_recipe, b_cost, b_cal in breakfast_pool:
+        for day_menu, day_cost, keys in day_combinations:
 
-            if not (BREAKFAST_RANGE[0] <= b_cal <= BREAKFAST_RANGE[1]):
-                stats.prune_calories()
+            if current_cost + day_cost >= lowest_cost:
+                stats.prune_cost()
                 continue
 
-            b_key = recipe_to_hashable(b_recipe)
-
-            if b_key in used_recipes:
+        # doppelte Rezepte verhindern
+            if any(key in used_recipes for key in keys):
                 stats.duplicate()
                 continue
 
-            for l_recipe, l_cost, l_cal in lunch_pool:
+            used_recipes.update(keys)
 
-                if not (LUNCH_RANGE[0] <= l_cal <= LUNCH_RANGE[1]):
-                    stats.prune_calories()
-                    continue
+            current_menu.append(day_menu)
 
-                l_key = recipe_to_hashable(l_recipe)
+            backtrack(
+                day_index + 1,
+                current_menu,
+                current_cost + day_cost,
+            )
 
-                if l_key in used_recipes:
-                    stats.duplicate()
-                    continue
+            current_menu.pop()
 
-                for d_recipe, d_cost, d_cal in dinner_pool:
+            used_recipes.difference_update(keys)
 
-                    if not (DINNER_RANGE[0] <= d_cal <= DINNER_RANGE[1]):
-                        stats.prune_calories()
-                        continue
-
-                    d_key = recipe_to_hashable(d_recipe)
-
-                    if d_key in used_recipes:
-                        stats.duplicate()
-                        continue
-
-                    day_kcal = b_cal + l_cal + d_cal
-
-                    if day_kcal > max_calories_per_day * 1.15:
-                        stats.prune_calories()
-                        continue
-
-                    day_cost = b_cost + l_cost + d_cost
-
-                    if current_cost + day_cost >= lowest_cost:
-                        stats.prune_cost()
-                        continue
-
-                    used_recipes.update([b_key, l_key, d_key])
-
-                    day_menu = [
-
-                        Meal("breakfast", b_recipe, b_cal),
-                        Meal("lunch", l_recipe, l_cal),
-                        Meal("dinner", d_recipe, d_cal),
-
-                    ]
-
-                    current_menu.append(day_menu)
-
-                    backtrack(
-                        day_index + 1,
-                        current_menu,
-                        current_cost + day_cost,
-                    )
-
-                    current_menu.pop()
-
-                    used_recipes.difference_update([b_key, l_key, d_key])
 
     backtrack(0, [], 0)
 
