@@ -14,7 +14,7 @@ def main():
     while True:
         try:
 
-            days = int(input("Anzahl Wochentage (1-7): "))
+            days = int(input("Bitte geben Sie die Anzahl Wochentage an, für die das Menü generiert werden soll (1-7): "))
 
             if 1 <= days <=7:
                 break
@@ -23,7 +23,7 @@ def main():
         except ValueError:
             print("Bitte geben Sie eine Zahl für 1 bis 7 Wochentage ein")
 
-    print("\nErnährungsform:")
+    print("\nBitte geben Sie Ihre Ernährungsform an:")
     print("1 - Vegan")
     print("2 - Fleisch erlaubt")
 
@@ -38,7 +38,7 @@ def main():
 
 
 
-    print("\nKalorien:")
+    print("\nBitte geben Sie an, ob Sie die Kalorien automatisch berechnen oder manuell eingeben möchten:")
     print("1 - Manuell eingeben")
     print("2 - Automatisch berechnen")
 

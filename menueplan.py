@@ -103,7 +103,7 @@ def generate_menu(days, max_calories_per_day, vegan_mode):
     lunch_target = max_calories_per_day * 0.4
     dinner_target = max_calories_per_day * 0.3
 
-    tolerance = max_calories_per_day * 0.25
+    tolerance = max_calories_per_day * 0.05
 
     BREAKFAST_RANGE = (
         breakfast_target - tolerance,
@@ -261,7 +261,7 @@ def generate_menu(days, max_calories_per_day, vegan_mode):
     backtrack(0, [], 0)
 
     # --------------------------------
-    # Sicherheitslösung (Fallback)
+    # Fallback
     # --------------------------------
 
     if best_menu is None:

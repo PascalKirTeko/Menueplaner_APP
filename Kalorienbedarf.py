@@ -2,7 +2,7 @@ def berechne_gesamtbedarf():
     # --- Gewicht ---
     while True:
         try:
-            gewicht = float(input("Gewicht (kg): "))
+            gewicht = float(input("Bitte geben Sie Ihr Gewicht in kg an: "))
             if 0 < gewicht <= 500:
                 break
         except ValueError:
@@ -12,7 +12,7 @@ def berechne_gesamtbedarf():
     # --- Größe ---
     while True:
         try:
-            groesse = float(input("Größe (cm): "))
+            groesse = float(input("Bitte geben Sie Ihre Grösse in cm an: "))
             if 50 <= groesse <= 300:
                 break
         except ValueError:
@@ -22,7 +22,7 @@ def berechne_gesamtbedarf():
     # --- Alter ---
     while True:
         try:
-            alter = int(input("Alter (Jahre): "))
+            alter = int(input("Wie alt sind Sie? (Jahre): "))
             if 0 < alter <= 120:
                 break
         except ValueError:
@@ -30,15 +30,16 @@ def berechne_gesamtbedarf():
         print("Bitte ein gültiges Alter zwischen 1 und 120 eingeben.")
 
     # --- Geschlecht ---
-    print("\nGeschlecht:")
+    print("\nBitte geben Sie Ihr Geschlecht an:")
     print("1 - männlich")
     print("2 - weiblich")
+    print("3 - sonstige")
 
     while True:
         geschlecht_input = input("Zahl eingeben: ")
-        if geschlecht_input in {"1", "2"}:
+        if geschlecht_input in {"1", "2", "3"}:
             break
-        print("Ungültige Eingabe, bitte 1 oder 2.")
+        print("Ungültige Eingabe, bitte geben Sie mit 1, 2 oder 3 Ihr Geschlecht an.")
 
     # --- PAL ---
     print("\nAlltagsaktivität:")
@@ -65,8 +66,11 @@ def berechne_gesamtbedarf():
     # --- Grundumsatz (Mifflin-St Jeor) ---
     if geschlecht_input == "1":  # männlich
         grundumsatz = 10 * gewicht + 6.25 * groesse - 5 * alter + 5
-    else:  # weiblich
-        grundumsatz = 10 * gewicht + 6.25 * groesse - 5 * alter - 161
+    elif geschlecht_input == "2": #weiblich
+          grundumsatz = 10 * gewicht + 6.25 * groesse - 5 * alter - 161
+    else:  #sonstige
+        grundumsatz = 10 * gewicht + 6.25 * groesse - 5 * alter - 80
+        
 
     # --- Gesamtbedarf ---
     gesamtbedarf = grundumsatz * pal_factor
