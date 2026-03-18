@@ -13,9 +13,7 @@ def main():
 
     while True:
         try:
-
             days = int(input("Bitte geben Sie die Anzahl Wochentage an, für die das Menü generiert werden soll (1-7): "))
-
             if 1 <= days <=7:
                 break
             else:
@@ -34,7 +32,7 @@ def main():
             vegan_mode = vegan_input == "1"
             break
         else:
-            print("Bitte geben Sie 1 für Vegan oder 2 für Fleisch erlaubt ein.")
+            print("Bitte geben Sie 1 für Vegan oder 2 für Fleisch ein.")
 
 
 
@@ -78,16 +76,12 @@ def main():
         day_calories = 0
 
         for meal in day:
-
             print(f"\n{meal_names[meal.meal_type]}")
             print(meal.recipe.name)
 
             for ingredient, amount in meal.recipe.ingredients.items():
-
                 unit = ingredients_db[ingredient]["unit"]
-
                 print(f"{ingredient:<15} {amount}{unit}")
-
             print(f"Kalorien: {meal.calories:.0f}")
 
             day_calories += meal.calories
@@ -106,7 +100,6 @@ def main():
     print("2 - Nein")
 
     if input("Zahl eingeben: ") == "1":
-
         print_shopping_list(menu)
 
     # -------------------------------
@@ -118,9 +111,7 @@ def main():
     print("2 - Nein")
 
     if input("Zahl eingeben: ") == "1":
-
         export_menu_pdf(menu)
-
 
 if __name__ == "__main__":
     main()

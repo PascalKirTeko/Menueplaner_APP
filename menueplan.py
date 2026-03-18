@@ -15,11 +15,8 @@ def calculate_recipe_cost(recipe):
     cost = 0
 
     for name, amount in recipe.ingredients.items():
-
         ingredient = ingredients_db[name]
-
         cost += amount * ingredient["price_per_unit"]
-
     return cost
 
 
@@ -32,13 +29,10 @@ def calculate_recipe_calories(recipe):
     protein = carbs = fat = 0
 
     for name, amount in recipe.ingredients.items():
-
         ingredient = ingredients_db[name]
-
         protein += amount * ingredient["protein_per_unit"]
         carbs += amount * ingredient["carbs_per_unit"]
         fat += amount * ingredient["fat_per_unit"]
-
     return protein * 4 + carbs * 4 + fat * 9
 
 
@@ -47,7 +41,6 @@ def calculate_recipe_calories(recipe):
 # --------------------------------
 
 def recipe_to_hashable(recipe):
-
     return tuple(sorted(recipe.ingredients.items()))
 
 
@@ -63,18 +56,13 @@ def generate_recipe_pool(size, vegan_mode):
     attempts = 0
 
     while len(pool) < size and attempts < size * 10:
-
         recipe = generate_recipe(ingredients_db, vegan=vegan_mode)
-
         key = recipe_to_hashable(recipe)
 
         if key not in seen:
-
             seen.add(key)
-
             cost = calculate_recipe_cost(recipe)
             calories = calculate_recipe_calories(recipe)
-
             pool.append((recipe, cost, calories))
 
         attempts += 1
@@ -146,12 +134,10 @@ def generate_menu(days, max_calories_per_day, vegan_mode):
     day_combinations = []
 
     for b_recipe, b_cost, b_cal in breakfast_pool:
-
         if not (BREAKFAST_RANGE[0] <= b_cal <= BREAKFAST_RANGE[1]):
             continue
 
         for l_recipe, l_cost, l_cal in lunch_pool:
-
             if not (LUNCH_RANGE[0] <= l_cal <= LUNCH_RANGE[1]):
                 continue
 
@@ -160,7 +146,6 @@ def generate_menu(days, max_calories_per_day, vegan_mode):
                 continue
 
             for d_recipe, d_cost, d_cal in dinner_pool:
-
                 if not (DINNER_RANGE[0] <= d_cal <= DINNER_RANGE[1]):
                     continue
 
@@ -172,11 +157,9 @@ def generate_menu(days, max_calories_per_day, vegan_mode):
                 day_cost = b_cost + l_cost + d_cost
 
                 day_menu = [
-
                     Meal("breakfast", b_recipe, b_cal),
                     Meal("lunch", l_recipe, l_cal),
                     Meal("dinner", d_recipe, d_cal),
-
                 ]
 
                 keys = [
@@ -200,15 +183,11 @@ def generate_menu(days, max_calories_per_day, vegan_mode):
             return
 
         if day_index == days:
-
             stats.valid_day()
-
             total_difference = 0
 
             for day in current_menu:
-
                 day_kcal = sum(meal.calories for meal in day)
-
                 total_difference += abs(max_calories_per_day - day_kcal)
 
             if (
@@ -271,22 +250,18 @@ def generate_menu(days, max_calories_per_day, vegan_mode):
         best_menu = []
 
         for _ in range(days):
-
             b = breakfast_pool[0]
             l = lunch_pool[0]
             d = dinner_pool[0]
-
             best_menu.append([
 
                 Meal("breakfast", b[0], b[2]),
                 Meal("lunch", l[0], l[2]),
                 Meal("dinner", d[0], d[2]),
-
             ])
 
         lowest_cost = b[1] + l[1] + d[1]
         best_difference = 0
-
     stats.print_report()
 
     return best_menu, lowest_cost, best_difference
