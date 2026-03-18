@@ -1,72 +1,13 @@
+
 from Rezepte_db import generate_recipe
+from Rezepte_db import calculate_recipe_cost
+from Rezepte_db import calculate_recipe_calories
+from Rezepte_db import recipe_to_hashable
+from Rezepte_db import generate_recipe_pool
 from Zutaten_db import ingredients_db
 from debug_stats import DebugStats
 from meal import Meal
-
-
-# --------------------------------
-# Kosten berechnen
-# --------------------------------
-
-def calculate_recipe_cost(recipe):
-
-    cost = 0
-
-    for name, amount in recipe.ingredients.items():
-        ingredient = ingredients_db[name]
-        cost += amount * ingredient["price_per_unit"]
-    return cost
-
-
-# --------------------------------
-# Kalorien berechnen
-# --------------------------------
-
-def calculate_recipe_calories(recipe):
-
-    protein = carbs = fat = 0
-
-    for name, amount in recipe.ingredients.items():
-        ingredient = ingredients_db[name]
-        protein += amount * ingredient["protein_per_unit"]
-        carbs += amount * ingredient["carbs_per_unit"]
-        fat += amount * ingredient["fat_per_unit"]
-    return protein * 4 + carbs * 4 + fat * 9
-
-
-# --------------------------------
-# Hash für Rezept
-# --------------------------------
-
-def recipe_to_hashable(recipe):
-    return tuple(sorted(recipe.ingredients.items()))
-
-
-# --------------------------------
-# Rezeptpool erzeugen
-# --------------------------------
-
-def generate_recipe_pool(size, vegan_mode):
-
-    pool = []
-    seen = set()
-
-    attempts = 0
-
-    while len(pool) < size and attempts < size * 10:
-        recipe = generate_recipe(ingredients_db, vegan=vegan_mode)
-        key = recipe_to_hashable(recipe)
-
-        if key not in seen:
-            seen.add(key)
-            cost = calculate_recipe_cost(recipe)
-            calories = calculate_recipe_calories(recipe)
-            pool.append((recipe, cost, calories))
-
-        attempts += 1
-
-    return pool
-
+import time
 
 # --------------------------------
 # Menü generieren
@@ -74,6 +15,7 @@ def generate_recipe_pool(size, vegan_mode):
 
 def generate_menu(days, max_calories_per_day, vegan_mode):
 
+    start_time = time.perf_counter()
     stats = DebugStats()
 
     # größere Pools erzeugen
@@ -89,7 +31,7 @@ def generate_menu(days, max_calories_per_day, vegan_mode):
     lunch_target = max_calories_per_day * 0.4
     dinner_target = max_calories_per_day * 0.3
 
-    tolerance = max_calories_per_day * 0.05
+    tolerance = max_calories_per_day * 0.2
 
     BREAKFAST_RANGE = (
         breakfast_target - tolerance,
@@ -114,16 +56,17 @@ def generate_menu(days, max_calories_per_day, vegan_mode):
     lunch_pool.sort(key=lambda x: abs(x[2] - lunch_target))
     dinner_pool.sort(key=lambda x: abs(x[2] - dinner_target))
 
-    # wichtigste Kandidaten behalten
-    breakfast_pool = breakfast_pool[:6]
-    lunch_pool = lunch_pool[:6]
-    dinner_pool = dinner_pool[:6]
+    #Wichtigste Kandidaten behalten
+    breakfast_pool = breakfast_pool[:8]
+    lunch_pool = lunch_pool[:8]
+    dinner_pool = dinner_pool[:8]
 
     best_menu = None
     lowest_cost = float("inf")
     best_difference = float("inf")
 
     used_recipes = set()
+    used_days = set()
 
     # --------------------------------
     # Tageskombinationen einmal berechnen
@@ -133,17 +76,17 @@ def generate_menu(days, max_calories_per_day, vegan_mode):
 
     for b_recipe, b_cost, b_cal in breakfast_pool:
         if not (BREAKFAST_RANGE[0] <= b_cal <= BREAKFAST_RANGE[1]):
-            #stats.prune_calories()
+            stats.prune_calories() #stats
             continue
 
         for l_recipe, l_cost, l_cal in lunch_pool:
             if not (LUNCH_RANGE[0] <= l_cal <= LUNCH_RANGE[1]):
-                #stats.prune_calories()
+                stats.prune_calories() #stats
                 continue
 
-        # früher Kaloriencheck
+            #Früher Kaloriencheck
             if b_cal + l_cal > max_calories_per_day * 1.15:
-                #stats.prune_calories
+                stats.prune_calories() #stats
                 continue
 
             for d_recipe, d_cost, d_cal in dinner_pool:
@@ -153,7 +96,7 @@ def generate_menu(days, max_calories_per_day, vegan_mode):
                 day_kcal = b_cal + l_cal + d_cal
 
                 if day_kcal > max_calories_per_day * 1.15:
-                    #stats.prune_calories()
+                    stats.prune_calories() #stats
                     continue
 
                 day_cost = b_cost + l_cost + d_cost
@@ -172,6 +115,8 @@ def generate_menu(days, max_calories_per_day, vegan_mode):
 
                 day_combinations.append((day_menu, day_cost, keys))
 
+    day_combinations.sort(key=lambda x: x[1])
+    
 
     # --------------------------------
     # Backtracking
@@ -181,13 +126,22 @@ def generate_menu(days, max_calories_per_day, vegan_mode):
 
         nonlocal best_menu, lowest_cost, best_difference
 
-        #stats.visit_node()
+        stats.visit_node() #stats
+        if len(current_menu) > 0:
+            avg_cost = current_cost / len(current_menu)
+            estimated_total = avg_cost * days
+
+            if estimated_total >= lowest_cost:
+                stats.prune_cost()
+                return
 
         if best_difference == 0:
             return
 
         if day_index == days:
-            #stats.valid_day()
+
+            stats.valid_day() #stats
+        
             total_difference = 0
 
             for day in current_menu:
@@ -215,17 +169,27 @@ def generate_menu(days, max_calories_per_day, vegan_mode):
         # Tageskombinationen testen
         # ------------------------------
 
+
         for day_menu, day_cost, keys in day_combinations:
 
+            #Tages Hash erstellen
+            day_key = tuple(sorted(keys))
+            
+            #Doppelte Tage verhindern
+            if day_key in used_days:
+                continue
+
+            #Kosten Pruning
             if current_cost + day_cost >= lowest_cost:
-                #stats.prune_cost()
+                stats.prune_cost() #stats
                 continue
 
-        # doppelte Rezepte verhindern
+            #Doppelte Rezepte verhindern
             if any(key in used_recipes for key in keys):
-                #stats.duplicate()
+                stats.duplicate() #stats
                 continue
 
+            used_days.add(day_key)        
             used_recipes.update(keys)
 
             current_menu.append(day_menu)
@@ -239,7 +203,7 @@ def generate_menu(days, max_calories_per_day, vegan_mode):
             current_menu.pop()
 
             used_recipes.difference_update(keys)
-
+            used_days.remove(day_key)
 
     backtrack(0, [], 0)
 
@@ -266,7 +230,13 @@ def generate_menu(days, max_calories_per_day, vegan_mode):
 
         lowest_cost = b[1] + l[1] + d[1]
         best_difference = 0
-    #stats.print_report()
-   
+
+    print(f"\nAlgorithmus-Zeit: {time.perf_counter() - start_time:.3f}s")    
+    stats.print_report()
+    print("Day combinations:", len(day_combinations)) #stats
+    print("Breakfast pool:", len(breakfast_pool)) #stats
+    print("Lunch pool:", len(lunch_pool)) #stats
+    print("Dinner pool:", len(dinner_pool)) #stats
+    
 
     return best_menu, lowest_cost, best_difference

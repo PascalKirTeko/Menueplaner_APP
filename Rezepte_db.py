@@ -2,7 +2,12 @@ import random
 from recipe import Recipe
 from Zutaten_db import ingredients_db
 
+#Nicht Vegane Zutatentypen
 ANIMAL_TYPES = {"meat", "dairy"}
+
+# --------------------------------
+# Rezepte generieren
+# --------------------------------
 
 def generate_recipe(ingredients_db, vegan=False):
 
@@ -57,3 +62,66 @@ def generate_recipe_name(recipe):
         parts.append(ingredient)
 
     return "-".join(parts) + "-Gericht"
+
+# --------------------------------
+# Kosten berechnen
+# --------------------------------
+
+def calculate_recipe_cost(recipe):
+
+    cost = 0
+
+    for name, amount in recipe.ingredients.items():
+        ingredient = ingredients_db[name]
+        cost += amount * ingredient["price_per_unit"]
+    return cost
+
+
+# --------------------------------
+# Kalorien berechnen
+# --------------------------------
+
+def calculate_recipe_calories(recipe):
+
+    protein = carbs = fat = 0
+
+    for name, amount in recipe.ingredients.items():
+        ingredient = ingredients_db[name]
+        protein += amount * ingredient["protein_per_unit"]
+        carbs += amount * ingredient["carbs_per_unit"]
+        fat += amount * ingredient["fat_per_unit"]
+    return protein * 4 + carbs * 4 + fat * 9
+
+# --------------------------------
+# Hash für Rezept
+# --------------------------------
+
+def recipe_to_hashable(recipe):
+    return tuple(sorted(recipe.ingredients.items()))
+
+
+# --------------------------------
+# Rezeptpool erzeugen
+# --------------------------------
+
+def generate_recipe_pool(size, vegan_mode):
+
+    pool = []
+    seen = set()
+
+    attempts = 0
+
+    while len(pool) < size and attempts < size * 10:
+        recipe = generate_recipe(ingredients_db, vegan=vegan_mode)
+        key = recipe_to_hashable(recipe)
+
+        if key not in seen:
+            seen.add(key)
+            cost = calculate_recipe_cost(recipe)
+            calories = calculate_recipe_calories(recipe)
+            pool.append((recipe, cost, calories))
+
+        attempts += 1
+
+    return pool
+
