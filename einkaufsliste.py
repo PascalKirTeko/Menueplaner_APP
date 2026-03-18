@@ -1,5 +1,3 @@
-# einkaufsliste.py
-
 from Zutaten_db import ingredients_db
 
 

@@ -1,5 +1,3 @@
-# debug_stats.py
-
 class DebugStats:
 
     def __init__(self):

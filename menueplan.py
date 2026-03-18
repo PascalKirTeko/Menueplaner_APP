@@ -1,5 +1,3 @@
-# menueplan.py
-
 from Rezepte_db import generate_recipe
 from Zutaten_db import ingredients_db
 from debug_stats import DebugStats
@@ -135,14 +133,17 @@ def generate_menu(days, max_calories_per_day, vegan_mode):
 
     for b_recipe, b_cost, b_cal in breakfast_pool:
         if not (BREAKFAST_RANGE[0] <= b_cal <= BREAKFAST_RANGE[1]):
+            #stats.prune_calories()
             continue
 
         for l_recipe, l_cost, l_cal in lunch_pool:
             if not (LUNCH_RANGE[0] <= l_cal <= LUNCH_RANGE[1]):
+                #stats.prune_calories()
                 continue
 
         # früher Kaloriencheck
             if b_cal + l_cal > max_calories_per_day * 1.15:
+                #stats.prune_calories
                 continue
 
             for d_recipe, d_cost, d_cal in dinner_pool:
@@ -152,6 +153,7 @@ def generate_menu(days, max_calories_per_day, vegan_mode):
                 day_kcal = b_cal + l_cal + d_cal
 
                 if day_kcal > max_calories_per_day * 1.15:
+                    #stats.prune_calories()
                     continue
 
                 day_cost = b_cost + l_cost + d_cost
@@ -179,11 +181,13 @@ def generate_menu(days, max_calories_per_day, vegan_mode):
 
         nonlocal best_menu, lowest_cost, best_difference
 
+        #stats.visit_node()
+
         if best_difference == 0:
             return
 
         if day_index == days:
-            stats.valid_day()
+            #stats.valid_day()
             total_difference = 0
 
             for day in current_menu:
@@ -214,12 +218,12 @@ def generate_menu(days, max_calories_per_day, vegan_mode):
         for day_menu, day_cost, keys in day_combinations:
 
             if current_cost + day_cost >= lowest_cost:
-                stats.prune_cost()
+                #stats.prune_cost()
                 continue
 
         # doppelte Rezepte verhindern
             if any(key in used_recipes for key in keys):
-                stats.duplicate()
+                #stats.duplicate()
                 continue
 
             used_recipes.update(keys)
@@ -262,6 +266,7 @@ def generate_menu(days, max_calories_per_day, vegan_mode):
 
         lowest_cost = b[1] + l[1] + d[1]
         best_difference = 0
-    stats.print_report()
+    #stats.print_report()
+   
 
     return best_menu, lowest_cost, best_difference

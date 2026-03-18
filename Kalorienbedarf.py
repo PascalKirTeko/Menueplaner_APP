@@ -3,7 +3,7 @@ def berechne_gesamtbedarf():
     while True:
         try:
             gewicht = float(input("Bitte geben Sie Ihr Gewicht in kg an: "))
-            if 0 < gewicht <= 500:
+            if 10 < gewicht <= 500:
                 break
         except ValueError:
             pass
@@ -23,7 +23,7 @@ def berechne_gesamtbedarf():
     while True:
         try:
             alter = int(input("Wie alt sind Sie? (Jahre): "))
-            if 0 < alter <= 120:
+            if 10 < alter <= 120:
                 break
         except ValueError:
             pass

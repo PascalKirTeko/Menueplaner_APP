@@ -1,5 +1,3 @@
-# main.py
-
 from menueplan import generate_menu
 from Kalorienbedarf import berechne_gesamtbedarf
 from Zutaten_db import ingredients_db
@@ -10,6 +8,10 @@ from pdf_export import export_menu_pdf
 def main():
 
     print("==== Menüplan Generator ====\n")
+
+    # -------------------------------
+    # Benutzerabfrage
+    # -------------------------------
 
     while True:
         try:
