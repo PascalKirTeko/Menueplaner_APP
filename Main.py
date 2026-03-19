@@ -101,8 +101,15 @@ def main():
     print("1 - Ja")
     print("2 - Nein")
 
-    if input("Zahl eingeben: ") == "1":
-        print_shopping_list(menu)
+    while True:
+        choice = input("Zahl eingeben: ")
+
+        if choice in ["1", "2"]:
+            if choice == "1":
+                print_shopping_list(menu)
+            break
+        else:
+            print("Bitte geben Sie 1 (Ja) oder 2 (Nein) ein.")
 
     # -------------------------------
     # PDF Export
@@ -112,8 +119,15 @@ def main():
     print("1 - Ja")
     print("2 - Nein")
 
-    if input("Zahl eingeben: ") == "1":
-        export_menu_pdf(menu)
+    while True:
+        choice = input("Zahl eingeben: ")
+
+        if choice in ["1", "2"]:
+            if choice == "1":
+                export_menu_pdf(menu)
+            break
+        else:
+            print("Bitte geben Sie 1 (Ja) oder 2 (Nein) ein.")
 
 if __name__ == "__main__":
     main()
