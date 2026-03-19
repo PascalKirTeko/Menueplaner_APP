@@ -13,12 +13,14 @@ def generate_recipe(ingredients_db, vegan=False):
 
     recipe = {}
 
+    #Zulassen tierischer Produkte oder nicht
     if vegan:
         allowed = {k: v for k, v in ingredients_db.items()
                    if v["type"] not in ANIMAL_TYPES}
     else:
         allowed = ingredients_db
 
+    #Zutaten nach Typ sortieren
     bases = [k for k,v in allowed.items() if v["type"] == "base"]
     vegetables = [k for k,v in allowed.items() if v["type"] == "vegetable"]
     vegan_proteins = [k for k,v in allowed.items() if v["type"] == "vegan_protein"]
@@ -26,6 +28,7 @@ def generate_recipe(ingredients_db, vegan=False):
     fats = [k for k,v in allowed.items() if v["type"] == "fat"]
     spices = [k for k,v in allowed.items() if v["type"] == "spice"]
 
+    #Zufällige Zutaten wählen
     base = random.choice(bases)
     recipe[base] = random.randint(80,150)
 
@@ -39,18 +42,24 @@ def generate_recipe(ingredients_db, vegan=False):
     for veg in random.sample(vegetables, random.randint(1,3)):
         recipe[veg] = random.randint(50,150)
 
+    #Kleine Menge Fett Hinzufügen 50% Wahrscheinlichkeit
     if fats and random.random() > 0.5:
         fat = random.choice(fats)
         recipe[fat] = random.randint(5,15)
 
+    #Kleine Menge Gewürze hinzufügen 1-2 Stk.
     if spices:
         for spice in random.sample(spices, random.randint(1,2)):
             recipe[spice] = random.randint(1,5)
 
     name = generate_recipe_name(recipe)
 
+    #Objekt erzeugen/zurückgeben
     return Recipe(name, recipe)
 
+# --------------------------------
+# Rezeptnamen generieren
+# --------------------------------
 
 def generate_recipe_name(recipe):
 
@@ -96,6 +105,7 @@ def calculate_recipe_calories(recipe):
 # Hash für Rezept
 # --------------------------------
 
+#Soritert Tuple und macht es so vergleichbar (Duplikate verhindern/Effizienz steigern)
 def recipe_to_hashable(recipe):
     return tuple(sorted(recipe.ingredients.items()))
 
@@ -111,10 +121,12 @@ def generate_recipe_pool(size, vegan_mode):
 
     attempts = 0
 
+    #Schleife mit Schutz vor Endlosschleife
     while len(pool) < size and attempts < size * 10:
         recipe = generate_recipe(ingredients_db, vegan=vegan_mode)
         key = recipe_to_hashable(recipe)
 
+        #Duppliakte verhindern
         if key not in seen:
             seen.add(key)
             cost = calculate_recipe_cost(recipe)

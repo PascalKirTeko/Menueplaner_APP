@@ -4,7 +4,6 @@ from Rezepte_db import calculate_recipe_cost
 from Rezepte_db import calculate_recipe_calories
 from Rezepte_db import recipe_to_hashable
 from Rezepte_db import generate_recipe_pool
-from Zutaten_db import ingredients_db
 from debug_stats import DebugStats
 from meal import Meal
 import time
@@ -15,10 +14,10 @@ import time
 
 def generate_menu(days, max_calories_per_day, vegan_mode):
 
-    start_time = time.perf_counter()
-    stats = DebugStats()
+    start_time = time.perf_counter() #stats
+    stats = DebugStats() #stats
 
-    # größere Pools erzeugen
+    # größere Pools erzeugen und auf Mahlzeiten aufteilen
     breakfast_pool = generate_recipe_pool(30, vegan_mode)
     lunch_pool = generate_recipe_pool(30, vegan_mode)
     dinner_pool = generate_recipe_pool(30, vegan_mode)
@@ -27,12 +26,14 @@ def generate_menu(days, max_calories_per_day, vegan_mode):
     # Dynamische Kalorienbereiche
     # --------------------------------
 
+    #Kalorien nach Mahlzeiten aufteilen mit Toleranz
     breakfast_target = max_calories_per_day * 0.3
     lunch_target = max_calories_per_day * 0.4
     dinner_target = max_calories_per_day * 0.3
 
     tolerance = max_calories_per_day * 0.2
 
+    #Tupel für Range bei Tageskombinationen
     BREAKFAST_RANGE = (
         breakfast_target - tolerance,
         breakfast_target + tolerance
@@ -52,11 +53,12 @@ def generate_menu(days, max_calories_per_day, vegan_mode):
     # Pools nach Zielkalorien sortieren
     # --------------------------------
 
+    #Pool nach nähesten Ergebnissen zu Zielkalorien sortieren
     breakfast_pool.sort(key=lambda x: abs(x[2] - breakfast_target))
     lunch_pool.sort(key=lambda x: abs(x[2] - lunch_target))
     dinner_pool.sort(key=lambda x: abs(x[2] - dinner_target))
 
-    #Wichtigste Kandidaten behalten
+    #Beste Kandidaten behalten
     breakfast_pool = breakfast_pool[:8]
     lunch_pool = lunch_pool[:8]
     dinner_pool = dinner_pool[:8]
@@ -75,6 +77,7 @@ def generate_menu(days, max_calories_per_day, vegan_mode):
     day_combinations = []
 
     for b_recipe, b_cost, b_cal in breakfast_pool:
+        #Verwerfen von zu hohen/tiefen Kalorien
         if not (BREAKFAST_RANGE[0] <= b_cal <= BREAKFAST_RANGE[1]):
             stats.prune_calories() #stats
             continue
@@ -84,7 +87,7 @@ def generate_menu(days, max_calories_per_day, vegan_mode):
                 stats.prune_calories() #stats
                 continue
 
-            #Früher Kaloriencheck
+            #Früher Kaloriencheck. Wenn Frühstück und Mittagessen zu hoch -> Abbruch
             if b_cal + l_cal > max_calories_per_day * 1.15:
                 stats.prune_calories() #stats
                 continue
@@ -98,15 +101,18 @@ def generate_menu(days, max_calories_per_day, vegan_mode):
                 if day_kcal > max_calories_per_day * 1.15:
                     stats.prune_calories() #stats
                     continue
-
+                 
+                #Gesamtkosten berechnen für 1 Tag       
                 day_cost = b_cost + l_cost + d_cost
 
+                #Tagesmenü erstellen mit Rezept und Kalorien
                 day_menu = [
                     Meal("breakfast", b_recipe, b_cal),
                     Meal("lunch", l_recipe, l_cal),
                     Meal("dinner", d_recipe, d_cal),
                 ]
 
+                #Erstellen Hashes für eindeutige Identifikation
                 keys = [
                     recipe_to_hashable(b_recipe),
                     recipe_to_hashable(l_recipe),
@@ -115,6 +121,7 @@ def generate_menu(days, max_calories_per_day, vegan_mode):
 
                 day_combinations.append((day_menu, day_cost, keys))
 
+    #Sortieren nach billigste Tage zuerst (Effizienzsteigerung)
     day_combinations.sort(key=lambda x: x[1])
     
 
@@ -124,9 +131,12 @@ def generate_menu(days, max_calories_per_day, vegan_mode):
 
     def backtrack(day_index, current_menu, current_cost):
 
+        #Zugriff auf globale Variabeln
         nonlocal best_menu, lowest_cost, best_difference
 
         stats.visit_node() #stats
+
+        #Kosten Bounding. Druchschnittskosten berechnen. Wenn Schlechter -> Abbruch
         if len(current_menu) > 0:
             avg_cost = current_cost / len(current_menu)
             estimated_total = avg_cost * days
@@ -134,20 +144,24 @@ def generate_menu(days, max_calories_per_day, vegan_mode):
             if estimated_total >= lowest_cost:
                 stats.prune_cost()
                 return
-
+        
+        #Wenn keine bessere Lösung -> Abbruch 
         if best_difference == 0:
             return
 
+        #Wenn alle Tage gefüllt -> Abbruch
         if day_index == days:
 
             stats.valid_day() #stats
         
             total_difference = 0
 
+            #Vergleich Menü zu Zielkalorien
             for day in current_menu:
                 day_kcal = sum(meal.calories for meal in day)
                 total_difference += abs(max_calories_per_day - day_kcal)
 
+            #Aktuallieren beste Lösung (Prio: Kalorien > Kosten)
             if (
                 total_difference < best_difference
                 or (
@@ -155,7 +169,7 @@ def generate_menu(days, max_calories_per_day, vegan_mode):
                     and current_cost < lowest_cost
                 )
             ):
-
+                #Speichern bestes Menü (Kopie)
                 best_menu = [d.copy() for d in current_menu]
                 lowest_cost = current_cost
                 best_difference = total_difference
@@ -172,34 +186,37 @@ def generate_menu(days, max_calories_per_day, vegan_mode):
 
         for day_menu, day_cost, keys in day_combinations:
 
-            #Tages Hash erstellen
+            #Tages Hash erstellen 
             day_key = tuple(sorted(keys))
             
             #Doppelte Tage verhindern
             if day_key in used_days:
                 continue
 
-            #Kosten Pruning
+            #Wenn Kosten zu hoch -> Abbruch
             if current_cost + day_cost >= lowest_cost:
                 stats.prune_cost() #stats
                 continue
 
-            #Doppelte Rezepte verhindern
+            #Doppelte Rezepte verhindern respektive Wiederholungen verhindern
             if any(key in used_recipes for key in keys):
                 stats.duplicate() #stats
                 continue
 
+            #Neuen Tag hinzufügen / Aktuallisierung    
             used_days.add(day_key)        
             used_recipes.update(keys)
 
             current_menu.append(day_menu)
 
+            #Rekursion -> nächster Tag
             backtrack(
                 day_index + 1,
                 current_menu,
                 current_cost + day_cost,
             )
 
+            #Zustand Reset
             current_menu.pop()
 
             used_recipes.difference_update(keys)
